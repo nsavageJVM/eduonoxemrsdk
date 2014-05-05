@@ -43,9 +43,19 @@ public class SeismicCluster {
         cluster.runCluster();
     }
 
-
-
-
+    /** !!!!! WARNING WARNING important !!!!!!!!!!!!!
+     *  see video, the code breaks here
+     *  you need to rename the properties file
+     *  AWSCredentials.properties to
+     *  AwsCredentials.properties
+     *  and paste your actual values into the
+     *  <access key here> <secretKey here>
+     *      place holders
+     *
+     * !!!!!!! WARNING WARNING WARNING WARNING !!!!!!!!!!!!!!!!!!!
+     * never store your security credentials unencrypted
+     * to GITHUB or any other code repository
+     */
     void init() throws Exception {
         AWSCredentials credentials = new PropertiesCredentials(
                 SeismicCluster.class.getClassLoader().getResourceAsStream("AwsCredentials.properties"));
@@ -54,25 +64,14 @@ public class SeismicCluster {
     }
 
 
-    public static JobFlowInstancesConfig setNodeBoxs() throws Exception {
-
-        // set up instances
-        JobFlowInstancesConfig box = new JobFlowInstancesConfig();
-        box.setHadoopVersion( "2.2.0");
-        box.setInstanceCount(NUM_BOX);
-        box.setTerminationProtected(termination_Protection);
-        box.setMasterInstanceType(BOX);
-        box.setSlaveInstanceType(BOX);
-
-        return box;
-    }
-
 
     public void runCluster() throws Exception {
-        // Configure the job flow
-        RunJobFlowRequest request = new RunJobFlowRequest("seismicProcessor", setNodeBoxs());
+
+        // Configure the job flow object that will hold the steps
+        RunJobFlowRequest request = new RunJobFlowRequest("seismicProcessor", setNodeBoxes());
         request.setLogUri("s3n://eduonix/log/");
-        HadoopJarStepConfig jarConfig = new HadoopJarStepConfig(JAR);
+
+
 
         try {
 
@@ -81,6 +80,7 @@ public class SeismicCluster {
                     .withActionOnFailure("TERMINATE_JOB_FLOW")
                     .withHadoopJarStep(new StepFactory().newEnableDebuggingStep());
 
+            HadoopJarStepConfig jarConfig = new HadoopJarStepConfig(JAR);
             StepConfig runJar =
                     new StepConfig("/eduonix/job/MapReduceModule.jar", jarConfig);
 
@@ -97,13 +97,19 @@ public class SeismicCluster {
                 DescribeJobFlowsRequest desc =
                         new DescribeJobFlowsRequest(
                                 Arrays.asList(new String[]{result.getJobFlowId()}));
+
                 DescribeJobFlowsResult descResult = client.describeJobFlows(desc);
+
                 for (JobFlowDetail detail : descResult.getJobFlows()) {
+
                     String state = detail.getExecutionStatusDetail().getState();
+
                     if (isDone(state)) {
                         System.out.println("Job " + state + ": " + detail.toString());
                         break STATUS_LOOP;
-                    } else if (!lastState.equals(state)) {
+                    }
+
+                    else if (!lastState.equals(state)) {
                         lastState = state;
                         System.out.println("Job " + state + " at " + new Date().toString());
                     }
@@ -117,6 +123,23 @@ public class SeismicCluster {
             System.out.println("Request ID: " + ase.getRequestId());
         }
     }
+
+
+
+    public static JobFlowInstancesConfig setNodeBoxes() throws Exception {
+
+        // set up instances
+        JobFlowInstancesConfig box = new JobFlowInstancesConfig();
+        box.setHadoopVersion( "2.2.0");
+        box.setInstanceCount(NUM_BOX);
+        box.setTerminationProtected(termination_Protection);
+        box.setMasterInstanceType(BOX);
+        box.setSlaveInstanceType(BOX);
+
+        return box;
+    }
+
+
 
     public static boolean isDone(String value) {
         JobFlowExecutionState state = JobFlowExecutionState.fromValue(value);
