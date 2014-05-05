@@ -1,0 +1,15 @@
+hadoop-1.2.1/*
+.settings
+.springBeans
+.project
+.idea
+target
+*.class
+*.jar
+*.iml
+*part-r*
+*SUCCESS*
+.classpath
+testDataout
+bk
+src/main/resources/AwsCredentials.properties
